@@ -1,0 +1,10 @@
+{
+  "name": "Campus Cash Pro",
+  "short_name": "Campus Cash",
+  "description": "A student budget app for income, expenses, budgets and savings.",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f4f6f8",
+  "theme_color": "#111827",
+  "icons": []
+}
