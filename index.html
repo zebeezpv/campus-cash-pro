@@ -1,0 +1,575 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111827">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Campus Cash">
+  <link rel="manifest" href="manifest.json">
+  <title>Campus Cash Pro</title>
+  <style>
+    :root {
+      --bg:#f4f6f8; --panel:#ffffff; --text:#172033; --muted:#667085;
+      --line:#e4e7ec; --dark:#111827; --green:#087a5b; --red:#b42318;
+      --orange:#b54708; --soft:#eef2f6; --shadow:0 10px 30px rgba(16,24,40,.06);
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+    button,input,select{font:inherit}
+    button{cursor:pointer}
+    .app{max-width:1120px;margin:auto;padding:18px 14px 80px}
+    .top{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:14px}
+    .top h1{margin:0;font-size:1.55rem}
+    .muted{color:var(--muted);font-size:.84rem}
+    .grid{display:grid;grid-template-columns:repeat(12,1fr);gap:12px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;box-shadow:var(--shadow)}
+    .summary{grid-column:span 3}
+    .income-editor{grid-column:span 4}
+    .transaction-form{grid-column:span 4}
+    .savings{grid-column:span 4}
+    .transactions{grid-column:span 8}
+    .budgets{grid-column:span 4}
+    h2{font-size:1rem;margin:0 0 13px}
+    .value{display:block;font-size:1.65rem;font-weight:800;margin-top:6px}
+    .good{color:var(--green)} .bad{color:var(--red)}
+    .fields{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+    .full{grid-column:1/-1}
+    label{display:block;color:var(--muted);font-size:.77rem;margin-bottom:4px}
+    input,select{width:100%;border:1px solid var(--line);background:#fff;color:var(--text);padding:11px;border-radius:12px;outline:none}
+    input:focus,select:focus{border-color:#98a2b3;box-shadow:0 0 0 3px rgba(152,162,179,.15)}
+    button{border:0;border-radius:12px;padding:11px 13px;background:var(--dark);color:#fff;font-weight:750}
+    .soft{background:var(--soft);color:var(--text)}
+    .danger{background:#fff0ef;color:var(--red)}
+    .row{display:flex;align-items:center;gap:8px}
+    .between{display:flex;justify-content:space-between;align-items:center;gap:10px}
+    .hint{padding:10px 12px;border-radius:12px;background:#f8fafc;color:var(--muted);font-size:.82rem;margin-top:10px}
+    .emoji-row{display:flex;gap:6px;flex-wrap:wrap}
+    .emoji-row button{background:var(--soft);padding:8px}
+    .tx{display:grid;grid-template-columns:44px 1fr auto auto;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid var(--line)}
+    .tx:last-child{border-bottom:0}
+    .icon{width:42px;height:42px;border-radius:12px;background:var(--soft);display:grid;place-items:center;font-size:1.2rem}
+    .tx-title{font-weight:750}
+    .amount{font-weight:800;white-space:nowrap}
+    .small-btn{padding:8px 10px}
+    .empty{text-align:center;color:var(--muted);padding:24px 8px}
+    .bar{height:10px;background:var(--soft);border-radius:999px;overflow:hidden;margin-top:7px}
+    .fill{height:100%;background:var(--green);transition:width .25s ease}
+    .fill.warn{background:var(--orange)} .fill.over{background:var(--red)}
+    .goal-number{font-size:1.3rem;font-weight:800}
+    .toolbar{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+    .month-input{max-width:170px}
+    .notice{display:none;margin:0 0 12px;padding:11px 13px;border-radius:12px;background:#ecfdf3;color:#05603a;font-weight:700}
+    .notice.show{display:block}
+
+    .clickable-card{cursor:pointer}
+    .mini-edit{padding:6px 10px;border-radius:999px;background:var(--soft);color:var(--text);font-size:.78rem}
+    .collapsible-panel{display:none}
+    .collapsible-panel.open{display:block}
+    .section-toggle{
+      width:100%;display:flex;justify-content:space-between;align-items:center;
+      background:transparent;color:var(--text);padding:0;font-size:1rem;font-weight:800
+    }
+    .section-toggle:hover{background:transparent}
+    @media(max-width:900px){
+      .summary{grid-column:span 6}
+      .income-editor,.transaction-form,.savings,.transactions,.budgets{grid-column:1/-1}
+    }
+    @media(max-width:540px){
+      .summary{grid-column:1/-1}
+      .top{align-items:flex-start;flex-direction:column}
+      .month-input{max-width:none}
+      .fields{grid-template-columns:1fr}
+      .tx{grid-template-columns:42px 1fr auto}
+      .tx .delete{grid-column:3}
+    }
+  </style>
+</head>
+<body>
+<main class="app">
+  <div class="top">
+    <div>
+      <h1>Campus Cash Pro</h1>
+      <div class="muted">A student budget that saves automatically on your device.</div>
+    </div>
+    <input id="month" class="month-input" type="month">
+  </div>
+
+  <div id="notice" class="notice"></div>
+
+  <section class="grid">
+    <div class="card summary clickable-card" id="incomeSummaryCard">
+      <div class="between">
+        <span class="muted">Total income</span>
+        <button id="editIncomeBtn" class="mini-edit" type="button">Edit</button>
+      </div>
+      <span id="incomeTotal" class="value good">R0.00</span>
+    </div>
+    <div class="card summary">
+      <span class="muted">Expenses</span>
+      <span id="expenseTotal" class="value bad">R0.00</span>
+    </div>
+    <div class="card summary">
+      <span class="muted">Money left</span>
+      <span id="moneyLeft" class="value">R0.00</span>
+    </div>
+    <div class="card summary">
+      <span class="muted">Saved this month</span>
+      <span id="savedMonth" class="value good">R0.00</span>
+    </div>
+
+    <div class="card income-editor collapsible-panel" id="incomeEditorPanel">
+      <div class="between">
+        <h2>Monthly income</h2>
+        <button id="closeIncomeEditor" class="soft small-btn" type="button">Close</button>
+      </div>
+      <div class="fields">
+        <div class="full">
+          <label for="monthlyIncome">Main monthly income</label>
+          <input id="monthlyIncome" type="number" min="0" step="0.01" placeholder="e.g. 5000">
+        </div>
+        <button id="saveIncome" class="full">Save income</button>
+      </div>
+      <div class="hint">
+        This amount is saved separately for every month. Extra income can still be added as a transaction.
+      </div>
+    </div>
+
+    <div class="card transaction-form">
+      <button id="transactionToggle" class="section-toggle" type="button">
+        <span>Add transaction</span>
+        <span id="transactionArrow">＋</span>
+      </button>
+      <div id="transactionPanel" class="collapsible-panel">
+      <form id="transactionForm" class="fields">
+        <div>
+          <label for="type">Type</label>
+          <select id="type">
+            <option value="expense">Expense</option>
+            <option value="income">Extra income</option>
+          </select>
+        </div>
+        <div>
+          <label for="amount">Amount</label>
+          <input id="amount" type="number" min="0.01" step="0.01" placeholder="e.g. 250" required>
+        </div>
+        <div>
+          <label for="category">Category</label>
+          <select id="category"></select>
+        </div>
+        <div>
+          <label for="date">Date</label>
+          <input id="date" type="date" required>
+        </div>
+        <div class="full">
+          <label for="reason">Why?</label>
+          <input id="reason" maxlength="100" placeholder="e.g. Groceries at Checkers">
+        </div>
+        <div>
+          <label for="emoji">Emoji</label>
+          <input id="emoji" maxlength="4" placeholder="🛒">
+        </div>
+        <div class="emoji-row">
+          <button type="button">🍔</button><button type="button">🚕</button>
+          <button type="button">📚</button><button type="button">☕</button>
+          <button type="button">💊</button><button type="button">🎮</button>
+        </div>
+        <button class="full" type="submit">Add transaction</button>
+      </form>
+      </div>
+    </div>
+
+    <div class="card savings">
+      <h2>Savings</h2>
+      <div class="between">
+        <div>
+          <div class="muted">Current savings</div>
+          <div id="currentSavings" class="goal-number">R0.00</div>
+        </div>
+        <div style="text-align:right">
+          <div class="muted">Goal</div>
+          <div id="goalDisplay" class="goal-number">R0.00</div>
+        </div>
+      </div>
+      <div class="bar"><div id="savingsBar" class="fill" style="width:0%"></div></div>
+      <div id="goalPercent" class="muted" style="margin-top:6px">0% of goal</div>
+      <div class="fields" style="margin-top:13px">
+        <div>
+          <label for="savingsGoal">Savings goal</label>
+          <input id="savingsGoal" type="number" min="0" step="0.01" placeholder="e.g. 10000">
+        </div>
+        <button id="saveGoal" type="button">Save goal</button>
+        <div>
+          <label for="savingAmount">Amount to save</label>
+          <input id="savingAmount" type="number" min="0.01" step="0.01" placeholder="e.g. 500">
+        </div>
+        <button id="addSavings" type="button">Add to savings</button>
+      </div>
+      <div class="hint">
+        Adding savings creates a “Savings” expense, so expenses and money left update automatically.
+      </div>
+    </div>
+
+    <div class="card transactions">
+      <div class="between">
+        <h2>Transactions</h2>
+        <span id="entryCount" class="muted">0 entries</span>
+      </div>
+      <div id="transactions"></div>
+      <div class="toolbar">
+        <button id="exportCsv" class="soft" type="button">Export CSV</button>
+        <button id="backupJson" class="soft" type="button">Backup JSON</button>
+        <label class="soft" style="padding:11px 13px;border-radius:12px;font-weight:750;cursor:pointer">
+          Import JSON
+          <input id="importJson" type="file" accept=".json,application/json" hidden>
+        </label>
+        <button id="clearAll" class="danger" type="button">Clear all data</button>
+      </div>
+    </div>
+
+    <div class="card budgets">
+      <h2>Monthly category budgets</h2>
+      <div class="fields">
+        <select id="budgetCategory"></select>
+        <input id="budgetLimit" type="number" min="0" step="0.01" placeholder="Limit">
+        <button id="saveBudget" class="full" type="button">Save limit</button>
+      </div>
+      <div id="budgetList" style="margin-top:14px"></div>
+    </div>
+  </section>
+</main>
+
+<script>
+const $ = id => document.getElementById(id);
+const money = new Intl.NumberFormat('en-ZA',{style:'currency',currency:'ZAR'});
+
+const categories = {
+  expense: [
+    ['Food & groceries','🛒'], ['Transport','🚕'], ['Rent & housing','🏠'],
+    ['Data & airtime','📱'], ['Study materials','📚'], ['Health','💊'],
+    ['Entertainment','🎮'], ['Savings','💰'], ['Other','📦']
+  ],
+  income: [
+    ['Part-time work','💼'], ['Side hustle','🧠'], ['Bursary / funding','🎓'],
+    ['Gift','🎁'], ['Other income','➕']
+  ]
+};
+
+function defaultState(){
+  return {
+    transactions: [],
+    monthlyIncome: {},
+    budgets: {},
+    savings: { current: 0, goal: 0 }
+  };
+}
+
+function loadState(){
+  try {
+    return Object.assign(defaultState(), JSON.parse(localStorage.getItem('campusCashProV3') || '{}'));
+  } catch {
+    return defaultState();
+  }
+}
+
+let state = loadState();
+
+function saveState(){
+  localStorage.setItem('campusCashProV3', JSON.stringify(state));
+}
+
+function today(){
+  return new Date().toISOString().slice(0,10);
+}
+
+function currentMonth(){
+  return $('month').value;
+}
+
+function escapeHtml(value){
+  return String(value ?? '').replace(/[&<>"']/g, char => ({
+    '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+  })[char]);
+}
+
+function categoryEmoji(type, category){
+  const found = categories[type].find(item => item[0] === category);
+  return found ? found[1] : '•';
+}
+
+function fillCategories(select, type){
+  select.innerHTML = categories[type].map(item => `<option>${item[0]}</option>`).join('');
+}
+
+function showNotice(message){
+  $('notice').textContent = message;
+  $('notice').classList.add('show');
+  setTimeout(() => $('notice').classList.remove('show'), 2200);
+}
+
+function monthTransactions(){
+  const month = currentMonth();
+  return state.transactions
+    .filter(tx => tx.date.startsWith(month))
+    .sort((a,b) => b.date.localeCompare(a.date));
+}
+
+function totals(){
+  const txs = monthTransactions();
+  const baseIncome = Number(state.monthlyIncome[currentMonth()] || 0);
+  const extraIncome = txs.filter(tx => tx.type === 'income').reduce((sum,tx) => sum + Number(tx.amount),0);
+  const expenses = txs.filter(tx => tx.type === 'expense').reduce((sum,tx) => sum + Number(tx.amount),0);
+  const saved = txs.filter(tx => tx.type === 'expense' && tx.category === 'Savings')
+                   .reduce((sum,tx) => sum + Number(tx.amount),0);
+  return { income: baseIncome + extraIncome, expenses, left: baseIncome + extraIncome - expenses, saved };
+}
+
+function render(){
+  const txs = monthTransactions();
+  const t = totals();
+
+  $('incomeTotal').textContent = money.format(t.income);
+  $('expenseTotal').textContent = money.format(t.expenses);
+  $('moneyLeft').textContent = money.format(t.left);
+  $('moneyLeft').className = 'value ' + (t.left < 0 ? 'bad' : '');
+  $('savedMonth').textContent = money.format(t.saved);
+  $('monthlyIncome').value = state.monthlyIncome[currentMonth()] ?? '';
+
+  $('entryCount').textContent = `${txs.length} ${txs.length === 1 ? 'entry' : 'entries'}`;
+
+  $('transactions').innerHTML = txs.length ? txs.map(tx => `
+    <div class="tx">
+      <div class="icon">${escapeHtml(tx.emoji || categoryEmoji(tx.type,tx.category))}</div>
+      <div>
+        <div class="tx-title">${escapeHtml(tx.reason || tx.category)}</div>
+        <div class="muted">${escapeHtml(tx.category)} · ${tx.date}</div>
+      </div>
+      <div class="amount ${tx.type === 'expense' ? 'bad' : 'good'}">
+        ${tx.type === 'expense' ? '−' : '+'}${money.format(tx.amount)}
+      </div>
+      <button class="soft small-btn delete" onclick="deleteTransaction('${tx.id}')">✕</button>
+    </div>
+  `).join('') : '<div class="empty">No transactions for this month yet.</div>';
+
+  const goal = Number(state.savings.goal || 0);
+  const current = Number(state.savings.current || 0);
+  const percent = goal > 0 ? Math.min(100, (current / goal) * 100) : 0;
+  $('currentSavings').textContent = money.format(current);
+  $('goalDisplay').textContent = money.format(goal);
+  $('savingsGoal').value = goal || '';
+  $('savingsBar').style.width = percent + '%';
+  $('goalPercent').textContent = goal > 0 ? `${percent.toFixed(0)}% of goal` : 'Set a savings goal';
+
+  const expenseTxs = txs.filter(tx => tx.type === 'expense');
+  const monthBudgets = state.budgets[currentMonth()] || {};
+  const budgetEntries = Object.entries(monthBudgets);
+
+  $('budgetList').innerHTML = budgetEntries.length ? budgetEntries.map(([category,limit]) => {
+    const spent = expenseTxs.filter(tx => tx.category === category)
+      .reduce((sum,tx) => sum + Number(tx.amount),0);
+    const ratio = Number(limit) > 0 ? spent / Number(limit) : 0;
+    const barClass = ratio > 1 ? 'over' : ratio >= .8 ? 'warn' : '';
+    return `
+      <div style="margin-bottom:13px">
+        <div class="between">
+          <span>${escapeHtml(category)}</span>
+          <b>${money.format(spent)} / ${money.format(limit)}</b>
+        </div>
+        <div class="bar"><div class="fill ${barClass}" style="width:${Math.min(100,ratio*100)}%"></div></div>
+      </div>
+    `;
+  }).join('') : '<div class="empty">No budget limits set for this month.</div>';
+}
+
+window.deleteTransaction = function(id){
+  const tx = state.transactions.find(item => item.id === id);
+  if (tx && tx.category === 'Savings' && tx.type === 'expense') {
+    state.savings.current = Math.max(0, Number(state.savings.current) - Number(tx.amount));
+  }
+  state.transactions = state.transactions.filter(item => item.id !== id);
+  saveState();
+  render();
+};
+
+$('saveIncome').addEventListener('click', () => {
+  const value = Number($('monthlyIncome').value || 0);
+  if (value < 0) return;
+  state.monthlyIncome[currentMonth()] = value;
+  saveState();
+  render();
+  showNotice('Monthly income saved.');
+  incomePanel.classList.remove('open');
+});
+
+$('type').addEventListener('change', () => fillCategories($('category'), $('type').value));
+
+document.querySelectorAll('.emoji-row button').forEach(button => {
+  button.addEventListener('click', () => $('emoji').value = button.textContent);
+});
+
+$('transactionForm').addEventListener('submit', event => {
+  event.preventDefault();
+  const amount = Number($('amount').value);
+  if (!(amount > 0)) return;
+
+  state.transactions.push({
+    id: crypto.randomUUID(),
+    type: $('type').value,
+    amount,
+    category: $('category').value,
+    date: $('date').value,
+    reason: $('reason').value.trim(),
+    emoji: $('emoji').value.trim()
+  });
+
+  saveState();
+  event.target.reset();
+  $('type').value = 'expense';
+  fillCategories($('category'),'expense');
+  $('date').value = today();
+  render();
+  showNotice('Transaction added.');
+});
+
+$('saveGoal').addEventListener('click', () => {
+  const goal = Number($('savingsGoal').value || 0);
+  if (goal < 0) return;
+  state.savings.goal = goal;
+  saveState();
+  render();
+  showNotice('Savings goal saved.');
+});
+
+$('addSavings').addEventListener('click', () => {
+  const amount = Number($('savingAmount').value);
+  if (!(amount > 0)) return;
+
+  state.savings.current = Number(state.savings.current || 0) + amount;
+  state.transactions.push({
+    id: crypto.randomUUID(),
+    type: 'expense',
+    amount,
+    category: 'Savings',
+    date: today(),
+    reason: 'Savings contribution',
+    emoji: '💰'
+  });
+
+  $('savingAmount').value = '';
+  saveState();
+  render();
+  showNotice('Savings updated.');
+});
+
+$('saveBudget').addEventListener('click', () => {
+  const month = currentMonth();
+  const category = $('budgetCategory').value;
+  const limit = Number($('budgetLimit').value || 0);
+
+  if (!state.budgets[month]) state.budgets[month] = {};
+  if (limit > 0) state.budgets[month][category] = limit;
+  else delete state.budgets[month][category];
+
+  $('budgetLimit').value = '';
+  saveState();
+  render();
+  showNotice('Budget limit saved.');
+});
+
+function download(filename, content, type){
+  const link = document.createElement('a');
+  link.href = URL.createObjectURL(new Blob([content],{type}));
+  link.download = filename;
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+
+$('exportCsv').addEventListener('click', () => {
+  const rows = [
+    ['Date','Type','Category','Reason','Emoji','Amount'],
+    ...state.transactions.map(tx => [tx.date,tx.type,tx.category,tx.reason,tx.emoji,tx.amount])
+  ];
+  const csv = rows.map(row => row.map(value =>
+    `"${String(value ?? '').replaceAll('"','""')}"`
+  ).join(',')).join('\n');
+  download('campus-cash-transactions.csv',csv,'text/csv');
+});
+
+$('backupJson').addEventListener('click', () => {
+  download('campus-cash-backup.json',JSON.stringify(state,null,2),'application/json');
+});
+
+$('importJson').addEventListener('change', async event => {
+  try{
+    const imported = JSON.parse(await event.target.files[0].text());
+    state = Object.assign(defaultState(), imported);
+    saveState();
+    render();
+    showNotice('Backup imported.');
+  }catch{
+    alert('That backup file is not valid.');
+  }
+});
+
+$('clearAll').addEventListener('click', () => {
+  if(confirm('Clear all Campus Cash data?')){
+    state = defaultState();
+    saveState();
+    render();
+    showNotice('All data cleared.');
+  }
+});
+
+
+const incomeCard = $('incomeSummaryCard');
+const incomePanel = $('incomeEditorPanel');
+const editIncomeBtn = $('editIncomeBtn');
+const closeIncomeEditor = $('closeIncomeEditor');
+
+function openIncomeEditor(){
+  incomePanel.classList.add('open');
+  setTimeout(() => {
+    $('monthlyIncome').focus();
+    incomePanel.scrollIntoView({behavior:'smooth', block:'center'});
+  }, 50);
+}
+
+incomeCard.addEventListener('click', event => {
+  if(event.target.closest('#editIncomeBtn') || event.currentTarget === incomeCard){
+    openIncomeEditor();
+  }
+});
+
+editIncomeBtn.addEventListener('click', event => {
+  event.stopPropagation();
+  openIncomeEditor();
+});
+
+closeIncomeEditor.addEventListener('click', () => {
+  incomePanel.classList.remove('open');
+});
+
+const transactionToggle = $('transactionToggle');
+const transactionPanel = $('transactionPanel');
+const transactionArrow = $('transactionArrow');
+
+transactionToggle.addEventListener('click', () => {
+  const isOpen = transactionPanel.classList.toggle('open');
+  transactionArrow.textContent = isOpen ? '−' : '＋';
+});
+
+$('month').addEventListener('change', render);
+
+$('month').value = today().slice(0,7);
+$('date').value = today();
+fillCategories($('category'),'expense');
+fillCategories($('budgetCategory'),'expense');
+render();
+
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('service-worker.js');
+}
+</script>
+</body>
+</html>
